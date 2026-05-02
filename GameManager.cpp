@@ -41,15 +41,13 @@ public:
     bool isPlayable(Card *card)//edited by Mutahir
     {
         if (card->getType() == CardType::WILD ||card->getType() == CardType::WILD_DRAW_FOUR) return true;
-        if (card->getColor() == currentColor) return true;
+        if (card->getColor() == topCard->getColor()) 
+            return true;
         if (card->getType() == topCard->getType()) {
             if (card->getType() == CardType::NUMBER)
                 return card->getValue() == topCard->getValue();
             return true; // same special type always matches
-        }
-        if (card->getColor() == topCard->getColor())
-            return true;
-        
+        }        
         return false;
     }
     // return color==other.getColor()||type==other.getType();   // old operator overloading
@@ -130,7 +128,7 @@ public:
     //     //     // cout << "Color chosen: " << colorToString(currentColor) << "\n";
     //     // }
     // }
-    void Wild_and_WildDrawFou(Card * card)
+    void Wild_and_WildDrawFour(Card * card)
         {
             if(isPlayable(card))
             {

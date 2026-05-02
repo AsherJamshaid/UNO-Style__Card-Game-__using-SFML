@@ -23,6 +23,7 @@ class GameManager{
      bool isPlayable(Card *card);
      void playCard(Player *p, Card *card);
      void applyEffect(Card *card);
+     void Wild_and_WildDrawFour(Card * card);
      void playerTurn();
      void startGame();
      void runGame();
