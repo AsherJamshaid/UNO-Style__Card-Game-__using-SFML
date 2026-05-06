@@ -1,9 +1,19 @@
 // ============================================================
-//  UNO_Game_v5.h  —  Declarations / Prototypes only
+//  UNO_Game_v5.h  —  Complete Game Backend (GUI-ready)
 //
-//  All implementations live in UNO_Game_v5.cpp.
-//  Include this header in every translation unit that needs
-//  game logic.
+//  Changes from the original console version (UNO_Game_v5.cpp):
+//    1. Removed #include <iostream> and ALL cout/cin statements
+//    2. Removed runGame(), playerTurn(), displaycardsinhand()
+//    3. Removed Wild_and_WildDrawFour() — GUI handles colour choice
+//    4. Added TurnPhase enum for GUI state-machine
+//    5. Added GUI action methods on GameManager
+//    6. startGame() now deals 7 cards (was 10, debug value)
+//    7. Added resetGame() for "New Game" button
+//    8. Removed int main()
+//
+//  ALL game rules and logic are completely unchanged.
+//
+//  Companion file: UNO_Game.cpp  (all definitions + full comments)
 // ============================================================
 #pragma once
 
@@ -21,15 +31,14 @@ using namespace std;
 enum class Color    { RED, BLUE, GREEN, YELLOW, WILD };
 enum class CardType { NUMBER, SKIP, REVERSE, DRAW_TWO, WILD, WILD_DRAW_FOUR };
 
-// TurnPhase tells main.cpp exactly which screen / controls
-// to show at any given moment.
+// TurnPhase tells main.cpp which screen/controls to show.
 enum class TurnPhase
 {
     CHOOSE_ACTION,          // Normal: pick a card to play, or draw
     AWAITING_DRAW_DECISION, // Just drew — choose to play it or keep it
     CHOOSE_COLOR,           // Wild/WD4 played — must pick a colour
     PLAY_WILD_CARD,         // Colour chosen — must play a card of that colour
-    GAME_OVER               // A player emptied their hand — game finished
+    GAME_OVER               // A player emptied their hand
 };
 
 // ============================================================
@@ -77,7 +86,7 @@ public:
 };
 
 // ============================================================
-//  SPECIAL CARD  (Skip / Reverse / Draw Two / Wild / WD4)
+//  SPECIAL CARD  (Skip/Reverse/DrawTwo/Wild/WD4)
 // ============================================================
 
 class SpecialCard : public Card
@@ -90,12 +99,12 @@ public:
 };
 
 // ============================================================
-//  UNO DECK  (procedural card generator)
+//  UNO DECK  (Factory — infinite procedural generator)
 // ============================================================
 
 class UnoDeck
 {
-    static bool seeded;   // defined in .cpp
+    static bool seeded;
 
 public:
     static Card*         GenerateOneCard();
@@ -116,63 +125,57 @@ public:
     Player(const string& name);
     ~Player();
 
-    // --- Getters ---
     string               getName()     const;
     bool                 getSaidUno()  const;
     int                  getHandSize() const;
     const vector<Card*>& getHand()     const;
 
-    // --- Mutators ---
     void setSaidUno(bool val);
     void addCard(Card* card);
-    void removeCard(Card* card);
+    void removeCard(Card* card);   // removes exact pointer; does NOT delete
 };
 
 // ============================================================
-//  GAME MANAGER  (Singleton — one instance for the whole run)
+//  GAME MANAGER  (Singleton)
 // ============================================================
 
 class GameManager
 {
-    // --- Singleton instance ---
-    static GameManager* instance;   // defined in .cpp
+    static GameManager* instance;
 
-    // --- Core state ---
+    // Core state
     Card*           topCard          = nullptr;
     vector<Player*> players;
     int             currentPlayerIdx = 0;
 
-    // --- GUI state-machine variables ---
+    // GUI state-machine variables
     TurnPhase phase            = TurnPhase::CHOOSE_ACTION;
     Color     pendingWildColor = Color::RED;
     Card*     lastDrawnCard    = nullptr;
     Player*   winner           = nullptr;
 
-    // Private constructor — use getInstance() instead.
-    GameManager() = default;
+    GameManager();
 
-    // Internal helpers
     void internalPlayCard(Player* p, Card* card);
     void applyEffect(Card* card);
     bool checkWin(Player* p);
 
 public:
     static GameManager* getInstance();
-
     ~GameManager();
 
-    // --- Setup ---
+    // ---- Setup ----
     void addPlayer(Player* p);
     void startGame();
     void resetGame();
 
-    // --- Navigation ---
+    // ---- Navigation ----
     Player* getCurrentPlayer();
     Player* getOtherPlayer();
     void    advanceTurn();
     int     getCurrentPlayerIdx() const;
 
-    // --- State accessors ---
+    // ---- State accessors (read-only, called by GUI each frame) ----
     TurnPhase getTurnPhase()        const;
     Card*     getTopCard()          const;
     Color     getPendingWildColor() const;
@@ -181,10 +184,10 @@ public:
     Player*   getWinner()           const;
     bool      hasCardsOfColor(Color c) const;
 
-    // --- Playability check ---
+    // ---- Playability check ----
     bool isPlayable(const Card* card) const;
 
-    // --- Turn actions ---
+    // ---- Turn actions (called by GUI on player interaction) ----
     bool tryPlayCard(int handIndex);
     void drawCard();
     void playDrawnCard();

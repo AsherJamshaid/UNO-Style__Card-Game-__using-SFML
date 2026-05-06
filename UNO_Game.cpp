@@ -1,28 +1,15 @@
 // ============================================================
-//  UNO_Game_v5.cpp  —  Full game logic implementations
+//  UNO_Game.cpp  —  Definitions for UNO_Game.h
 //
-//  All class method definitions live here.
-//  Declarations / prototypes are in UNO_Game_v5.h.
-
-//  What changed from the console version:
-//    • Removed all cout / cin / displaycardsinhand
-//    • Removed runGame() / playerTurn() (GUI drives the loop)
-//    • Added TurnPhase enum for GUI state-machine
-//    • Added GUI-friendly action methods on GameManager
-//    • startGame() now deals 7 cards (was 10, debug value)
-//    • resetGame() lets the WIN screen restart without leaks
+//  All game rules and logic are completely unchanged from the
+//  original console backend.  See UNO_Game.h for the full
+//  class declarations.
 // ============================================================
+
 #include "UNO_Game.h"
 
 // ============================================================
-//  STATIC MEMBER DEFINITIONS
-// ============================================================
-
-bool         UnoDeck::seeded       = false;
-GameManager* GameManager::instance = nullptr;
-
-// ============================================================
-//  HELPER FUNCTIONS
+//  HELPER FUNCTIONS  (unchanged)
 // ============================================================
 
 string colorToString(Color c)
@@ -51,17 +38,18 @@ string cardTypeToString(CardType t)
 }
 
 // ============================================================
-//  CARD  (abstract base)
+//  CARD  (abstract base)  — UNCHANGED
 // ============================================================
 
 Card::Card(Color color, CardType type) : color(color), type(type) {}
 
 Color    Card::getColor() const { return color; }
 CardType Card::getType()  const { return type;  }
-int      Card::getValue() const { return -1;    }
+
+int Card::getValue() const { return -1; }
 
 // ============================================================
-//  NORMAL CARD  (0-9)
+//  NORMAL CARD  (0-9)  — UNCHANGED
 // ============================================================
 
 NormalCard::NormalCard(Color color, int v) : Card(color, CardType::NUMBER), value(v) {}
@@ -79,7 +67,7 @@ bool NormalCard::operator==(const Card& other) const
 }
 
 // ============================================================
-//  SPECIAL CARD  (Skip / Reverse / Draw Two / Wild / WD4)
+//  SPECIAL CARD  (Skip/Reverse/DrawTwo/Wild/WD4)  — UNCHANGED
 // ============================================================
 
 SpecialCard::SpecialCard(Color color, CardType type) : Card(color, type) {}
@@ -102,20 +90,17 @@ bool SpecialCard::operator==(const Card& other) const
 }
 
 // ============================================================
-//  UNO DECK
-
-//  56 distinct "slots": 40 number cards (4 colours × 0-9)
-//  plus 4 Skip, 4 Reverse, 4 Draw Two, 2 Wild, 2 Wild Draw Four.
+//  UNO DECK  — UNCHANGED (56-slot procedural generator)
 // ============================================================
 
+bool UnoDeck::seeded = false;
+
 Card* UnoDeck::GenerateOneCard()
-// Returns a freshly heap-allocated card chosen at random.
-// Caller (or GameManager) is responsible for eventual deletion.
 {
     if (!seeded) { srand((unsigned)time(nullptr)); seeded = true; }
     int id = rand() % 56 + 1;
 
-    // ---- BLUE  0-9  (id 1-10) ----
+    // BLUE 0-9  (id 1-10)
     if (id == 1)  return new NormalCard(Color::BLUE, 0);
     if (id == 2)  return new NormalCard(Color::BLUE, 1);
     if (id == 3)  return new NormalCard(Color::BLUE, 2);
@@ -127,7 +112,7 @@ Card* UnoDeck::GenerateOneCard()
     if (id == 9)  return new NormalCard(Color::BLUE, 8);
     if (id == 10) return new NormalCard(Color::BLUE, 9);
 
-    // ---- GREEN  0-9  (id 11-20) ----
+    // GREEN 0-9  (id 11-20)
     if (id == 11) return new NormalCard(Color::GREEN, 0);
     if (id == 12) return new NormalCard(Color::GREEN, 1);
     if (id == 13) return new NormalCard(Color::GREEN, 2);
@@ -139,7 +124,7 @@ Card* UnoDeck::GenerateOneCard()
     if (id == 19) return new NormalCard(Color::GREEN, 8);
     if (id == 20) return new NormalCard(Color::GREEN, 9);
 
-    // ---- YELLOW  0-9  (id 21-30) ----
+    // YELLOW 0-9  (id 21-30)
     if (id == 21) return new NormalCard(Color::YELLOW, 0);
     if (id == 22) return new NormalCard(Color::YELLOW, 1);
     if (id == 23) return new NormalCard(Color::YELLOW, 2);
@@ -151,7 +136,7 @@ Card* UnoDeck::GenerateOneCard()
     if (id == 29) return new NormalCard(Color::YELLOW, 8);
     if (id == 30) return new NormalCard(Color::YELLOW, 9);
 
-    // ---- RED  0-9  (id 31-40) ----
+    // RED 0-9  (id 31-40)
     if (id == 31) return new NormalCard(Color::RED, 0);
     if (id == 32) return new NormalCard(Color::RED, 1);
     if (id == 33) return new NormalCard(Color::RED, 2);
@@ -163,32 +148,31 @@ Card* UnoDeck::GenerateOneCard()
     if (id == 39) return new NormalCard(Color::RED, 8);
     if (id == 40) return new NormalCard(Color::RED, 9);
 
-    // ---- SKIP  x4  (id 41-44) ----
+    // SKIP x4  (id 41-44)
     if (id == 41) return new SpecialCard(Color::BLUE,   CardType::SKIP);
     if (id == 42) return new SpecialCard(Color::GREEN,  CardType::SKIP);
     if (id == 43) return new SpecialCard(Color::YELLOW, CardType::SKIP);
     if (id == 44) return new SpecialCard(Color::RED,    CardType::SKIP);
 
-    // ---- REVERSE  x4  (id 45-48) ----
+    // REVERSE x4  (id 45-48)
     if (id == 45) return new SpecialCard(Color::BLUE,   CardType::REVERSE);
     if (id == 46) return new SpecialCard(Color::GREEN,  CardType::REVERSE);
     if (id == 47) return new SpecialCard(Color::YELLOW, CardType::REVERSE);
     if (id == 48) return new SpecialCard(Color::RED,    CardType::REVERSE);
 
-    // ---- DRAW TWO  x4  (id 49-52) ----
+    // DRAW TWO x4  (id 49-52)
     if (id == 49) return new SpecialCard(Color::BLUE,   CardType::DRAW_TWO);
     if (id == 50) return new SpecialCard(Color::GREEN,  CardType::DRAW_TWO);
     if (id == 51) return new SpecialCard(Color::YELLOW, CardType::DRAW_TWO);
     if (id == 52) return new SpecialCard(Color::RED,    CardType::DRAW_TWO);
 
-    // ---- WILD  x2  (id 53-54) ----
+    // WILD x2  (id 53-54)
     if (id <= 54) return new SpecialCard(Color::WILD, CardType::WILD);
 
-    // ---- WILD DRAW FOUR  x2  (id 55-56) ----
+    // WILD DRAW FOUR x2  (id 55-56)
     return new SpecialCard(Color::WILD, CardType::WILD_DRAW_FOUR);
 }
 
-// Helper: generate 'count' cards at once.
 vector<Card*> UnoDeck::GenerateCards(int count)
 {
     vector<Card*> cards;
@@ -198,15 +182,12 @@ vector<Card*> UnoDeck::GenerateCards(int count)
 }
 
 // ============================================================
-//  PLAYER
+//  PLAYER  — UNCHANGED
 // ============================================================
 
 Player::Player(const string& name) : name(name), saidUno(false) {}
 
-Player::~Player()
-{
-    for (Card* c : hand) delete c;
-}
+Player::~Player() { for (Card* c : hand) delete c; }
 
 string               Player::getName()     const { return name;             }
 bool                 Player::getSaidUno()  const { return saidUno;          }
@@ -216,8 +197,7 @@ const vector<Card*>& Player::getHand()     const { return hand;             }
 void Player::setSaidUno(bool val) { saidUno = val; }
 void Player::addCard(Card* card)  { if (card) hand.push_back(card); }
 
-// Remove the exact pointer from hand (does NOT delete the card —
-// the caller becomes responsible for it, e.g. places it on topCard).
+// Remove exact pointer from hand (does NOT delete — caller owns it)
 void Player::removeCard(Card* card)
 {
     for (int i = 0; i < (int)hand.size(); i++) {
@@ -230,9 +210,81 @@ void Player::removeCard(Card* card)
 }
 
 // ============================================================
-//  GAME MANAGER
+//  GAME MANAGER  (Singleton)
 // ============================================================
 
+GameManager* GameManager::instance = nullptr;
+
+GameManager::GameManager() = default;
+
+// ----------------------------------------------------------------
+//  INTERNAL: place card on pile and trigger rule effects
+//  (same logic as original playCard(), renamed for clarity)
+// ----------------------------------------------------------------
+void GameManager::internalPlayCard(Player* p, Card* card)
+{
+    p->removeCard(card);
+    delete topCard;
+    topCard = card;
+    phase = TurnPhase::CHOOSE_ACTION;  // default; overridden by applyEffect
+    applyEffect(card);
+}
+
+// ----------------------------------------------------------------
+//  INTERNAL: rule side-effects — logic UNCHANGED from original
+//
+//  Skip / Reverse : pre-advance so caller's advanceTurn() nets a skip
+//  Draw Two / WD4 : other player draws, keeps their turn (no advance)
+//  Wild / WD4     : set phase to CHOOSE_COLOR for GUI colour picker
+// ----------------------------------------------------------------
+void GameManager::applyEffect(Card* card)
+{
+    switch (card->getType())
+    {
+    case CardType::NUMBER:
+        break;
+
+    case CardType::SKIP:
+    case CardType::REVERSE:             // Reverse = Skip in 2-player
+        advanceTurn();                  // pre-advance trick (unchanged)
+        break;
+
+    case CardType::DRAW_TWO:
+        getOtherPlayer()->addCard(UnoDeck::GenerateOneCard());
+        getOtherPlayer()->addCard(UnoDeck::GenerateOneCard());
+        break;
+
+    case CardType::WILD:
+        phase = TurnPhase::CHOOSE_COLOR;
+        break;
+
+    case CardType::WILD_DRAW_FOUR:
+        for (int i = 0; i < 4; i++)
+            getOtherPlayer()->addCard(UnoDeck::GenerateOneCard());
+        phase = TurnPhase::CHOOSE_COLOR;
+        break;
+
+    default:
+        break;
+    }
+}
+
+// ----------------------------------------------------------------
+//  INTERNAL: check win condition
+// ----------------------------------------------------------------
+bool GameManager::checkWin(Player* p)
+{
+    if (p->getHandSize() == 0) {
+        winner = p;
+        phase  = TurnPhase::GAME_OVER;
+        return true;
+    }
+    return false;
+}
+
+// ----------------------------------------------------------------
+//  Singleton accessor
+// ----------------------------------------------------------------
 GameManager* GameManager::getInstance()
 {
     if (!instance) instance = new GameManager();
@@ -249,17 +301,16 @@ GameManager::~GameManager()
 //  SETUP
 // ============================================================
 
-// Add a player before calling startGame().
 void GameManager::addPlayer(Player* p) { players.push_back(p); }
 
+// Deal 7 cards each (official UNO rule), pick a non-Wild start card
 void GameManager::startGame()
 {
     for (Player* p : players) {
-        vector<Card*> dealt = UnoDeck::GenerateCards(7);   // 7 cards — official UNO rule
+        vector<Card*> dealt = UnoDeck::GenerateCards(7);  // 7 cards (fixed from 10)
         for (Card* c : dealt) p->addCard(c);
     }
 
-    // The first discard-pile card must never be a Wild.
     do {
         delete topCard;
         topCard = UnoDeck::GenerateOneCard();
@@ -272,6 +323,7 @@ void GameManager::startGame()
     lastDrawnCard    = nullptr;
 }
 
+// Clear everything and start a fresh game (called by "New Game" button)
 void GameManager::resetGame()
 {
     delete topCard;
@@ -282,22 +334,22 @@ void GameManager::resetGame()
     winner        = nullptr;
     lastDrawnCard = nullptr;
 
-    players.push_back(new Player("Player 1"));
-    players.push_back(new Player("Player 2"));
+    players.push_back(new Player("David"));
+    players.push_back(new Player("Sarah"));
     startGame();
 }
 
 // ============================================================
-//  NAVIGATION
+//  NAVIGATION  — UNCHANGED
 // ============================================================
 
-Player* GameManager::getCurrentPlayer()          { return players[currentPlayerIdx];     }
-Player* GameManager::getOtherPlayer()            { return players[1 - currentPlayerIdx]; }
-void    GameManager::advanceTurn()               { currentPlayerIdx = 1 - currentPlayerIdx; }
+Player* GameManager::getCurrentPlayer()    { return players[currentPlayerIdx];     }
+Player* GameManager::getOtherPlayer()      { return players[1 - currentPlayerIdx]; }
+void    GameManager::advanceTurn()         { currentPlayerIdx = 1 - currentPlayerIdx; }
 int     GameManager::getCurrentPlayerIdx() const { return currentPlayerIdx; }
 
 // ============================================================
-//  STATE ACCESSORS
+//  STATE ACCESSORS  (read-only, called by GUI each frame)
 // ============================================================
 
 TurnPhase GameManager::getTurnPhase()        const { return phase;            }
@@ -307,7 +359,6 @@ Card*     GameManager::getLastDrawnCard()    const { return lastDrawnCard;    }
 bool      GameManager::isGameOver()          const { return phase == TurnPhase::GAME_OVER; }
 Player*   GameManager::getWinner()           const { return winner;           }
 
-// True if the current player has at least one card of colour c.
 bool GameManager::hasCardsOfColor(Color c) const
 {
     for (const Card* card : players[currentPlayerIdx]->getHand())
@@ -316,7 +367,7 @@ bool GameManager::hasCardsOfColor(Color c) const
 }
 
 // ============================================================
-//  PLAYABILITY CHECK
+//  PLAYABILITY CHECK  — UNCHANGED
 // ============================================================
 
 bool GameManager::isPlayable(const Card* card) const
@@ -333,86 +384,10 @@ bool GameManager::isPlayable(const Card* card) const
 }
 
 // ============================================================
-//  INTERNAL HELPERS
-//  place card on discard pile and trigger rule effects. Resets phase to CHOOSE_ACTION first; applyEffect may override.
+//  TURN ACTIONS  (called by GUI on player interaction)
 // ============================================================
 
-void GameManager::internalPlayCard(Player* p, Card* card)
-{
-    p->removeCard(card);
-    delete topCard;
-    topCard = card;
-    phase = TurnPhase::CHOOSE_ACTION;   // default, overridden below for Wilds
-    applyEffect(card);
-}
-
-// ----------------------------------------------------------------
-//  INTERNAL: rule side-effects after a card lands on the pile.
-//
-//  Skip / Reverse:
-//    Pre-advance here so the caller's final advanceTurn() double-
-//    toggles back → net effect = other player loses their turn.
-//
-//  Draw Two / Wild Draw Four:
-//    Other player draws cards but keeps their regular turn.
-//    No pre-advance → caller's single advanceTurn() gives other
-//    player their normal turn (with extra cards in hand).
-//
-//  Wild / WD4:
-//    Set phase to CHOOSE_COLOR so the GUI knows to show the
-//    colour-picker overlay.  Turn does NOT advance yet.
-// ----------------------------------------------------------------
-void GameManager::applyEffect(Card* card)
-{
-    switch (card->getType())
-    {
-    case CardType::NUMBER:
-        break;  // No side-effect.
-
-    case CardType::SKIP:
-    case CardType::REVERSE:             // Reverse = Skip in 2-player
-        advanceTurn();                  // pre-advance trick
-        break;
-
-    case CardType::DRAW_TWO:
-        getOtherPlayer()->addCard(UnoDeck::GenerateOneCard());
-        getOtherPlayer()->addCard(UnoDeck::GenerateOneCard());
-        // No advance — other player still gets their turn.
-        break;
-
-    case CardType::WILD:
-        phase = TurnPhase::CHOOSE_COLOR;
-        break;
-
-    case CardType::WILD_DRAW_FOUR:
-        // Other player draws 4, then current player picks a colour.
-        for (int i = 0; i < 4; i++)
-            getOtherPlayer()->addCard(UnoDeck::GenerateOneCard());
-        phase = TurnPhase::CHOOSE_COLOR;
-        break;
-
-    default:
-        break;
-    }
-}
-
-// check if player p has won; set state accordingly. Returns true if the game just ended.
-bool GameManager::checkWin(Player* p)
-{
-    if (p->getHandSize() == 0) {
-        winner = p;
-        phase  = TurnPhase::GAME_OVER;
-        return true;
-    }
-    return false;
-}
-
-// ============================================================
-//  TURN ACTIONS
-// ============================================================
-
-// --- Normal play: current player plays hand[handIndex] ---
-// Returns false if the card cannot be played (GUI can flash an error).
+// Play a card from hand by index
 bool GameManager::tryPlayCard(int handIndex)
 {
     if (phase != TurnPhase::CHOOSE_ACTION) return false;
@@ -424,20 +399,15 @@ bool GameManager::tryPlayCard(int handIndex)
     if (!isPlayable(card)) return false;
 
     internalPlayCard(p, card);
-
     if (checkWin(p)) return true;
 
-    // Only advance the turn if we're not pausing for a Wild colour choice.
     if (phase == TurnPhase::CHOOSE_ACTION)
         advanceTurn();
 
     return true;
 }
 
-// --- Draw a card from the deck ---
-// If the drawn card IS playable, moves to AWAITING_DRAW_DECISION so
-// the GUI can offer "Play it" / "Keep it".
-// If NOT playable, auto-keeps and immediately advances the turn.
+// Draw one card; if playable → AWAITING_DRAW_DECISION, else auto-pass
 void GameManager::drawCard()
 {
     if (phase != TurnPhase::CHOOSE_ACTION) return;
@@ -445,18 +415,17 @@ void GameManager::drawCard()
     Player* p     = getCurrentPlayer();
     Card*   drawn = UnoDeck::GenerateOneCard();
     p->addCard(drawn);
-    lastDrawnCard = drawn;   // remember so GUI can highlight it
+    lastDrawnCard = drawn;
 
-    if (isPlayable(drawn)) {
+    if (isPlayable(drawn))
         phase = TurnPhase::AWAITING_DRAW_DECISION;
-    } else {
-        // Not playable — auto-keep, pass turn. 
-        // TO BE ADDED -> DISPLAY AN APPROPRIATE MESSAGE IN GUI.
+    else {
         lastDrawnCard = nullptr;
         advanceTurn();
     }
 }
 
+// Play the just-drawn card
 void GameManager::playDrawnCard()
 {
     if (phase != TurnPhase::AWAITING_DRAW_DECISION || !lastDrawnCard) return;
@@ -466,14 +435,13 @@ void GameManager::playDrawnCard()
     lastDrawnCard = nullptr;
 
     internalPlayCard(p, card);
-
     if (checkWin(p)) return;
 
     if (phase == TurnPhase::CHOOSE_ACTION)
         advanceTurn();
-    // If phase == CHOOSE_COLOR (Wild drawn & played), GUI shows colour picker next.
 }
 
+// Keep the just-drawn card and end turn
 void GameManager::keepDrawnCard()
 {
     if (phase != TurnPhase::AWAITING_DRAW_DECISION) return;
@@ -482,8 +450,7 @@ void GameManager::keepDrawnCard()
     advanceTurn();
 }
 
-// --- Set the chosen Wild colour  (from CHOOSE_COLOR) ---
-// Moves phase to PLAY_WILD_CARD so the GUI shows the filtered hand.
+// Set the Wild colour chosen by the player
 void GameManager::setChosenColor(Color c)
 {
     if (phase != TurnPhase::CHOOSE_COLOR) return;
@@ -491,8 +458,7 @@ void GameManager::setChosenColor(Color c)
     phase = TurnPhase::PLAY_WILD_CARD;
 }
 
-// --- Play a card of the chosen colour as Wild follow-up  (PLAY_WILD_CARD) ---
-// Returns false if the card colour does not match pendingWildColor.
+// Play a card matching the chosen Wild colour
 bool GameManager::tryPlayWildFollowUp(int handIndex)
 {
     if (phase != TurnPhase::PLAY_WILD_CARD) return false;
@@ -504,7 +470,6 @@ bool GameManager::tryPlayWildFollowUp(int handIndex)
     if (card->getColor() != pendingWildColor) return false;
 
     internalPlayCard(p, card);
-
     if (checkWin(p)) return true;
 
     if (phase == TurnPhase::CHOOSE_ACTION)
@@ -513,7 +478,7 @@ bool GameManager::tryPlayWildFollowUp(int handIndex)
     return true;
 }
 
-// --- Fallback: no matching colour cards exist — just end the turn ---
+// No matching colour cards exist — just end the turn
 void GameManager::skipWildFollowUp()
 {
     if (phase != TurnPhase::PLAY_WILD_CARD) return;
